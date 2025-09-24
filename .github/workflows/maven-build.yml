@@ -1,4 +1,4 @@
-name: Maven Build & Test
+name: Maven Build & Docker
 
 on:
   push:
@@ -39,3 +39,17 @@ jobs:
         name: backend-test-reports
         path: backend/target/surefire-reports/
         retention-days: 5
+        
+    - name: Docker build and push
+      if: github.event_name != 'pull_request'
+      env:
+        REGISTRY_URL: registry.axelfrache.me
+        REGISTRY_USER: ${{ secrets.HARBOR_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+        PROJECT_NAME: folior
+        IMAGE_NAME: backend
+        IMAGE_TAG: ${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
+      run: |
+        echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
+        docker build -t $REGISTRY_URL/$PROJECT_NAME/$IMAGE_NAME:$IMAGE_TAG .
+        docker push $REGISTRY_URL/$PROJECT_NAME/$IMAGE_NAME:$IMAGE_TAG
